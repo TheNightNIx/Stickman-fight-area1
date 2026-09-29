@@ -9,16 +9,14 @@ import { PlayerWallet } from '../types/shop';
 import {
   Volume2,
   VolumeX,
-  Music,
   Maximize,
   Minimize,
-  HelpCircle,
   Pause,
   Play,
   RotateCcw,
   Home,
-  Coins,
-  Gem,
+  Settings,
+  Zap,
 } from 'lucide-react';
 import { sounds } from '../audio/soundEngine';
 
@@ -117,6 +115,7 @@ interface HUDProps {
   onOpenControls: () => void;
   onRestartMatch: () => void;
   onBackToLobby: () => void;
+  onOpenSettings?: () => void;
   wallet?: PlayerWallet;
 }
 
@@ -137,6 +136,7 @@ export const HUD: React.FC<HUDProps> = ({
   onOpenControls,
   onRestartMatch,
   onBackToLobby,
+  onOpenSettings,
   wallet,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -183,178 +183,126 @@ export const HUD: React.FC<HUDProps> = ({
   const aliveInfected = players.filter((p) => p.isAlive && p.isInfected).length;
   const survivalTimeRemaining = Math.max(0, 45 - Math.floor(roundTimer));
 
+  // 60-second round countdown (max 1:00 min per round; highest HP wins at timeout)
+  const remainingSeconds = Math.max(0, 60 - Math.floor(roundTimer));
+
   return (
-    <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-4 z-20">
-      {/* Top Header Bar */}
-      <header className="flex items-center justify-between pointer-events-auto bg-slate-900/85 backdrop-blur-md px-5 py-2.5 rounded-xl border border-slate-800 shadow-xl">
-        {/* Zone 1: Title Wordmark & Permanent Currency Bar */}
-        <div className="flex items-center gap-3">
-          <span className="text-lg font-black tracking-wider text-slate-100 uppercase">
-            STICK ARENA
-          </span>
-          <span className="text-slate-600">/</span>
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest hidden sm:inline">
-            {modeNames[gameMode]}
-          </span>
-
-          {/* Permanent Currency Bar (شريط الأرصدة الدائم: النقود والجواهر) */}
-          {wallet && (
-            <div className="flex items-center gap-2.5 px-3 py-1 rounded-xl bg-slate-950/80 border border-slate-700/80 shadow-inner">
-              <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-amber-300">
-                <Coins className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                <span>{wallet.coins.toLocaleString()}</span>
-                <span className="text-[10px] font-sans text-amber-400/80 hidden md:inline">نقود</span>
-              </div>
-              <span className="text-slate-700">|</span>
-              <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-cyan-300">
-                <Gem className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400 animate-pulse" />
-                <span>{wallet.gems.toLocaleString()}</span>
-                <span className="text-[10px] font-sans text-cyan-400/80 hidden md:inline">جواهر</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Zone 2: Round & Event Telemetry (Clean unboxed text) */}
-        <div className="flex items-center gap-4 text-xs font-medium text-slate-300">
-          <div>
-            <span className="text-slate-500 uppercase tracking-wider mr-1.5">Round</span>
-            <span className="font-mono tabular-nums font-bold text-white">
+    <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-3 sm:p-4 z-20">
+      {/* Top Header Bar - Slim, compact, contains strictly user-requested telemetry & controls */}
+      <header className="flex items-center justify-between pointer-events-auto bg-slate-900/90 backdrop-blur-md px-3 sm:px-4 py-1.5 rounded-2xl border border-slate-800 shadow-xl gap-2 sm:gap-3">
+        {/* 1. Round Count Telemetry */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950/80 border border-slate-700/80 shadow-inner">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+            <span className="text-[11px] font-bold text-slate-300">الجولة</span>
+            <span className="font-mono tabular-nums text-xs font-black text-amber-300">
               {currentRound} / {maxRounds}
             </span>
           </div>
 
-          <span className="text-slate-600" aria-hidden="true">·</span>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-800/80 text-slate-300 border border-slate-700/50 hidden md:inline-block">
+            {modeNames[gameMode]}
+          </span>
+        </div>
 
-          {gameMode === 'infection' ? (
-            <div className="flex items-center gap-3">
-              <div className="text-amber-300 font-bold">
-                <span className="text-slate-500 uppercase tracking-wider mr-1">Survival:</span>
-                <span className="font-mono tabular-nums text-amber-400">{survivalTimeRemaining}s</span>
-              </div>
-              <span className="text-slate-600" aria-hidden="true">·</span>
-              <div className="flex items-center gap-2">
-                <span className="text-sky-400 font-semibold font-mono">Surv: {aliveSurvivors}</span>
-                <span className="text-slate-500">vs</span>
-                <span className="text-emerald-400 font-semibold font-mono">Zomb: {aliveInfected}</span>
-              </div>
-            </div>
-          ) : gameMode === 'team_deathmatch' ? (
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-red-400 font-bold">
-                <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                <span>RED: {redWins}W</span>
-                <span className="text-slate-400 font-mono text-[11px]">({aliveRed} alive)</span>
-              </div>
-              <span className="text-slate-500 font-bold">vs</span>
-              <div className="flex items-center gap-1.5 text-blue-400 font-bold">
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                <span>BLUE: {blueWins}W</span>
-                <span className="text-slate-400 font-mono text-[11px]">({aliveBlue} alive)</span>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <span className="text-slate-500 uppercase tracking-wider mr-1.5">Time</span>
-              <span className="font-mono tabular-nums font-bold text-white">
-                {Math.floor(roundTimer / 60)}:{(Math.floor(roundTimer) % 60).toString().padStart(2, '0')}
+        {/* 2. Match Timer (Max 1:00 min & Highest HP Rule) & Next Event Timer */}
+        <div className="flex items-center gap-2 sm:gap-3 text-xs">
+          {/* Match Countdown Timer (Max 1:00 min) */}
+          <div
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-xl border transition-all ${
+              remainingSeconds <= 12
+                ? 'bg-rose-950/90 border-rose-500 text-rose-300 animate-pulse shadow-md shadow-rose-900/40'
+                : 'bg-slate-950/80 border-slate-700/80 text-slate-200'
+            }`}
+            title="مدة الجولة 1:00 دقيقة كحد أقصى - عند انتهاء الوقت يفوز صاحب أكبر HP دم"
+          >
+            <span className="text-[11px] font-bold text-slate-400">الوقت:</span>
+            <span className="font-mono font-black tabular-nums text-xs">
+              00:{remainingSeconds.toString().padStart(2, '0')}
+            </span>
+            {remainingSeconds <= 15 && (
+              <span className="text-[9px] font-bold text-amber-400 hidden lg:inline">
+                (أعلى HP يفوز)
               </span>
-            </div>
-          )}
+            )}
+          </div>
 
-          {gameMode === 'weapon_roulette' && (
-            <>
-              <span className="text-slate-600" aria-hidden="true">·</span>
-              <div className="text-amber-400 font-semibold">
-                <span className="text-slate-500 uppercase tracking-wider mr-1.5">Roulette</span>
-                <span className="font-mono tabular-nums font-bold">
-                  {Math.ceil(rouletteTimer)}s
-                </span>
-              </div>
-            </>
-          )}
-
-          <span className="text-slate-600" aria-hidden="true">·</span>
-
-          <div>
-            <span className="text-slate-500 uppercase tracking-wider mr-1.5">Next Event</span>
-            <span className="font-mono tabular-nums font-bold text-sky-400">
+          {/* Next Event Countdown */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950/80 border border-sky-500/30 text-sky-300">
+            <Zap className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+            <span className="text-[11px] font-bold text-slate-400 hidden sm:inline">الحدث القادم:</span>
+            <span className="font-mono font-black tabular-nums text-xs text-sky-300">
               {Math.ceil(nextEventTimer)}s
             </span>
           </div>
         </div>
 
-        {/* Zone 3: Functional Actions */}
-        <div className="flex items-center gap-2">
-          {/* Main Menu Button */}
+        {/* 3. Action Controls: Main Menu, Sound FX, Settings, Pause, Game Size, Restart Match */}
+        <div className="flex items-center gap-1 sm:gap-1.5">
+          {/* Main Menu */}
           <button
             onClick={onBackToLobby}
-            title="Main Menu"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-200 hover:text-white bg-slate-800/90 hover:bg-slate-700/90 rounded-lg border border-slate-700 shadow-sm transition-colors cursor-pointer"
+            title="القائمة الرئيسية (Main Menu)"
+            className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white bg-slate-800/90 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors cursor-pointer"
           >
             <Home className="w-3.5 h-3.5 text-sky-400" />
-            <span>Main Menu</span>
+            <span className="text-[11px] hidden lg:inline">الرئيسية</span>
           </button>
 
-          <button
-            onClick={onOpenControls}
-            title="Controls & Keys Guide"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg border border-slate-700 transition-colors"
-          >
-            <HelpCircle className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Controls</span>
-          </button>
-
-          {/* Music Toggle with Label */}
-          <button
-            onClick={handleToggleMusic}
-            title={musicOn ? 'كتم موسيقى الخلفية' : 'تشغيل موسيقى الخلفية'}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-              musicOn
-                ? 'bg-purple-950/70 border-purple-500/40 text-purple-300 shadow-sm'
-                : 'bg-slate-800/80 border-slate-700 text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            <Music className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-mono hidden sm:inline">{musicOn ? 'BGM ON' : 'BGM OFF'}</span>
-          </button>
-
-          {/* Sound FX Toggle with Label */}
+          {/* Sound FX Toggle (المؤثرات الصوتية) */}
           <button
             onClick={onToggleSound}
             title={soundEnabled ? 'كتم المؤثرات الصوتية' : 'تشغيل المؤثرات الصوتية'}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
               soundEnabled
-                ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300 shadow-sm'
+                ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300'
                 : 'bg-slate-800/80 border-slate-700 text-rose-400 hover:text-rose-300'
             }`}
           >
             {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-            <span className="text-[10px] font-mono hidden sm:inline">{soundEnabled ? 'SFX ON' : 'SFX OFF'}</span>
+            <span className="text-[10px] hidden xl:inline">{soundEnabled ? 'صوت' : 'مكتوم'}</span>
           </button>
 
+          {/* Settings Modal Toggle (الإعدادات) */}
+          {onOpenSettings && (
+            <button
+              onClick={onOpenSettings}
+              title="الإعدادات (Settings)"
+              className="p-1.5 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors cursor-pointer"
+            >
+              <Settings className="w-3.5 h-3.5 text-amber-400" />
+            </button>
+          )}
+
+          {/* Pause / Resume Match (إيقاف) */}
+          <button
+            onClick={onTogglePause}
+            title={isPaused ? 'استئناف المباراة' : 'إيقاف مؤقت'}
+            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+              isPaused
+                ? 'bg-amber-500/20 border-amber-400 text-amber-300'
+                : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700'
+            }`}
+          >
+            {isPaused ? <Play className="w-3.5 h-3.5 text-amber-400" /> : <Pause className="w-3.5 h-3.5" />}
+          </button>
+
+          {/* Game Size / Fullscreen (حجم اللعبة) */}
           <button
             onClick={toggleFullscreen}
-            title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-            className="p-1.5 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg border border-slate-700 transition-colors"
+            title={isFullscreen ? 'تصغير حجم اللعبة' : 'تكبير حجم اللعبة كاملة'}
+            className="p-1.5 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors cursor-pointer"
           >
             {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5 text-cyan-400" />}
           </button>
 
-          <button
-            onClick={onTogglePause}
-            title={isPaused ? 'Resume Match' : 'Pause Match'}
-            className="p-1.5 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg border border-slate-700 transition-colors"
-          >
-            {isPaused ? <Play className="w-4 h-4 text-amber-400" /> : <Pause className="w-4 h-4" />}
-          </button>
-
+          {/* Restart Match (إعادة المباراة) */}
           <button
             onClick={onRestartMatch}
-            title="Restart Match"
-            className="p-1.5 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg border border-slate-700 transition-colors"
+            title="إعادة المباراة من البداية"
+            className="p-1.5 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors cursor-pointer"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-3.5 h-3.5 text-rose-400 hover:rotate-180 transition-transform" />
           </button>
         </div>
       </header>

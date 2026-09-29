@@ -395,12 +395,17 @@ export function updatePlayerMovement(
     player.vx = 0;
   }
 
-  // Vertical bounds
-  if (currentGravity < 0) {
-    // Ceiling collision if reverse gravity
-    if (player.y - halfH < 50) {
-      player.y = 50 + halfH;
+  // Vertical bounds - Solid Arena Ceiling Barrier (fixes glitches where players escape above the map)
+  const CEILING_LIMIT = 48;
+  if (player.y - halfH < CEILING_LIMIT) {
+    player.y = CEILING_LIMIT + halfH;
+    if (player.vy < 0) {
+      if (Math.abs(player.vy) > 3) {
+        spawnDustParticles(player.x, CEILING_LIMIT, particles, '#38bdf8');
+      }
       player.vy = 0;
+    }
+    if (currentGravity < 0) {
       player.isGrounded = true;
       player.canDoubleJump = true;
     }
@@ -911,17 +916,19 @@ export function updateProjectiles(
       });
     }
 
-    // Wall collision
-    let collidedWithWall = false;
-    for (const plat of platforms) {
-      if (
-        proj.x >= plat.x &&
-        proj.x <= plat.x + plat.width &&
-        proj.y >= plat.y &&
-        proj.y <= plat.y + plat.height
-      ) {
-        collidedWithWall = true;
-        break;
+    // Wall or Ceiling collision
+    let collidedWithWall = proj.y <= 48; // Solid arena ceiling barrier
+    if (!collidedWithWall) {
+      for (const plat of platforms) {
+        if (
+          proj.x >= plat.x &&
+          proj.x <= plat.x + plat.width &&
+          proj.y >= plat.y &&
+          proj.y <= plat.y + plat.height
+        ) {
+          collidedWithWall = true;
+          break;
+        }
       }
     }
 

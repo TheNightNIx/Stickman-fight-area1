@@ -124,6 +124,18 @@ export const LobbyModal: React.FC<LobbyModalProps> = ({
   ];
 
   const enabledCount = playerConfigs.filter((p) => p.enabled).length;
+  const otherPlayers = playerConfigs.filter((p) => p.id !== 1);
+  const areAnyBotsEnabled = otherPlayers.some((p) => p.enabled);
+
+  const handleToggleAllBots = () => {
+    const shouldEnable = !areAnyBotsEnabled;
+    otherPlayers.forEach((p) => {
+      onUpdatePlayerConfig(p.id, {
+        enabled: shouldEnable,
+        type: shouldEnable ? 'cpu' : p.type,
+      });
+    });
+  };
 
   const scrollToSection = (target: 'modes' | 'roster' | 'rules') => {
     setActiveTab(target);
@@ -335,7 +347,7 @@ export const LobbyModal: React.FC<LobbyModalProps> = ({
 
               <button
                 onClick={onStartGame}
-                disabled={enabledCount < 2}
+                disabled={enabledCount < 1}
                 className="flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-black tracking-wider uppercase text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 disabled:opacity-40 rounded-xl shadow-lg shadow-amber-500/25 transition-all transform active:scale-95 cursor-pointer"
               >
                 <Play className="w-4 h-4 fill-slate-950" />
@@ -596,7 +608,21 @@ export const LobbyModal: React.FC<LobbyModalProps> = ({
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Master Bot Toggle Button (ميزة تعطيل/تشغيل كافة البوتات) */}
+                <button
+                  onClick={handleToggleAllBots}
+                  className={`px-3 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 shadow-sm ${
+                    areAnyBotsEnabled
+                      ? 'bg-rose-950/70 hover:bg-rose-900 border-rose-500/50 text-rose-300'
+                      : 'bg-emerald-950/70 hover:bg-emerald-900 border-emerald-500/50 text-emerald-300'
+                  }`}
+                  title={areAnyBotsEnabled ? 'تعطيل جميع البوتات ومنعهم من الدخول' : 'تفعيل البوتات للدخول إلى المباراة'}
+                >
+                  <Bot className="w-3.5 h-3.5" />
+                  <span>{areAnyBotsEnabled ? 'تعطيل كافة البوتات (OFF)' : 'تشغيل البوتات (ON)'}</span>
+                </button>
+
                 <button
                   onClick={() => {
                     playerConfigs.forEach((p) => {
@@ -610,9 +636,6 @@ export const LobbyModal: React.FC<LobbyModalProps> = ({
                 >
                   <span>🎲 سكنات عشوائية للبوتات</span>
                 </button>
-                <span className="text-xs text-slate-400 hidden md:inline">
-                  (البوتات تدخل بسكن وقبعة عشوائية)
-                </span>
               </div>
             </div>
 
@@ -661,7 +684,7 @@ export const LobbyModal: React.FC<LobbyModalProps> = ({
                         {/* Enable / Disable toggle */}
                         <button
                           onClick={() => {
-                            if (cfg.enabled && enabledCount <= 2) return;
+                            if (cfg.enabled && enabledCount <= 1) return;
                             onUpdatePlayerConfig(cfg.id, { enabled: !cfg.enabled });
                           }}
                           className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border transition-colors cursor-pointer ${
@@ -800,10 +823,16 @@ export const LobbyModal: React.FC<LobbyModalProps> = ({
                         )}
                       </div>
 
-                      {/* Controls hint */}
-                      <div className="text-[11px] font-mono text-slate-500 text-center">
-                        {cfg.type === 'human' ? controlsSummary : 'Automated Bot (يدخل بسكن وقبعة عشوائية)'}
-                      </div>
+                      {/* Controls hint or Disabled Notice */}
+                      {cfg.enabled ? (
+                        <div className="text-[11px] font-mono text-slate-500 text-center">
+                          {cfg.type === 'human' ? controlsSummary : 'Automated Bot (يدخل بسكن وقبعة عشوائية)'}
+                        </div>
+                      ) : (
+                        <div className="text-[10px] font-bold text-rose-300 bg-rose-950/80 border border-rose-500/50 rounded-lg py-1 px-2 text-center flex items-center justify-center gap-1 shadow-sm">
+                          <span>🚫 معطل (لن يدخل المباراة نهائياً)</span>
+                        </div>
+                      )}
                     </div>
                   );
                 }

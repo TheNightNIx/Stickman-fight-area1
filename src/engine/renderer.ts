@@ -138,6 +138,30 @@ export function renderGame(
   ctx.globalAlpha = 0.55;
   ctx.strokeRect(0, 0, map.width, map.height);
 
+  // Solid Arena Ceiling Barrier Line (سقف الماب لمنع الهروب والقلتشات للأعلى)
+  const ceilingY = 48;
+  const ceilingPulse = (Math.sin(Date.now() * 0.005) + 1) * 0.5;
+  ctx.save();
+  ctx.strokeStyle = map.theme.accentColor || '#38bdf8';
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = map.theme.accentColor || '#38bdf8';
+  ctx.shadowBlur = 12 + ceilingPulse * 8;
+  ctx.globalAlpha = 0.75 + ceilingPulse * 0.25;
+  ctx.beginPath();
+  ctx.moveTo(0, ceilingY);
+  ctx.lineTo(map.width, ceilingY);
+  ctx.stroke();
+
+  // Subtle warning dashes along the ceiling barrier
+  ctx.lineWidth = 1;
+  ctx.setLineDash([12, 16]);
+  ctx.beginPath();
+  ctx.moveTo(0, ceilingY + 3);
+  ctx.lineTo(map.width, ceilingY + 3);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
   const cornerLen = 50;
   ctx.lineWidth = 5;
   ctx.globalAlpha = 0.9;
@@ -683,7 +707,7 @@ function drawWeaponInHand(
   if (isSkinActive) {
     const pulse = (Math.sin(now * 0.01) + 1) * 0.5;
     if (skin?.effect === 'rainbow' || isRainbow) {
-      // Celestial Infinity God Weapon effect: orbiting chromatic sparks & infinity symbol
+      // Celestial Infinity Sovereign Weapon effect: orbiting chromatic sparks & infinity symbol
       ctx.save();
       ctx.fillStyle = glowColor || '#ffffff';
       for (let i = 0; i < 3; i++) {

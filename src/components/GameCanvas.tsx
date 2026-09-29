@@ -18,6 +18,7 @@ import {
   PlayerId,
   GameSettings,
   PlayerKeyBindingsMap,
+  RoundPlacement,
 } from '../types/game';
 import { MAPS } from '../engine/maps';
 import {
@@ -36,7 +37,7 @@ interface GameCanvasProps {
   settings: GameSettings;
   isPaused: boolean;
   keyBindings?: PlayerKeyBindingsMap;
-  onRoundOver: (winnerId: PlayerId | null) => void;
+  onRoundOver: (winnerId: PlayerId | null, placements?: RoundPlacement[]) => void;
   onMatchOver: (championId: PlayerId) => void;
   onUpdateScore: (playerId: PlayerId, deltaScore: number, points?: number) => void;
   onHUDUpdate?: (data: {
@@ -82,6 +83,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const hudThrottleRef = useRef<number>(0);
   const infectedRespawnTimersRef = useRef<{ [id: number]: number }>({});
   const lastSurvivorIdRef = useRef<PlayerId | null>(null);
+  const deathOrderRef = useRef<PlayerId[]>([]);
   
   // Game Loop Timers
   const roundTimerRef = useRef<number>(0);
@@ -110,6 +112,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const startNewRound = useCallback(() => {
     roundEndingRef.current = false;
     roundTimerRef.current = 0;
+    deathOrderRef.current = [];
     nextEventTimerRef.current = settings.mode === 'chaos' ? 10 : 28;
     activeEventRef.current = null;
     rouletteTimerRef.current = 10;
@@ -124,9 +127,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     floatingTextsRef.current = [];
     firePatchesRef.current = [];
 
-    // Spawn enabled players at designated spawn points
+    // Spawn enabled players at designated spawn points (respecting game mode player limit)
     const currentConfigs = playerConfigsRef.current;
-    const enabledPlayers = currentConfigs.filter((p) => p.enabled);
+    const maxAllowed = settings.mode === 'battle_royale' ? 6 : 4;
+    const enabledPlayers = currentConfigs
+      .slice(0, maxAllowed)
+      .filter((p) => p.enabled);
 
     // If Infection Mode: pick one random patient zero zombie
     const initialInfectedIndex =
@@ -688,10 +694,17 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           }
         }
 
-        // 13. Camera Damping & Target
+        // 13.5 Track eliminated order for placements
+        for (const p of playersRef.current) {
+          if (!p.isAlive && !deathOrderRef.current.includes(p.id)) {
+            deathOrderRef.current.push(p.id);
+          }
+        }
+
+        // 14. Camera Damping & Target
         updateCamera(dt, map, playersRef.current, activeEventRef.current);
 
-        // 14. Check Round End Condition
+        // 15. Check Round End Condition
         checkRoundOverConditions();
 
         // 15. Throttle HUD state sync
@@ -1097,16 +1110,101 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     }
   };
 
+  // Helper: Compute placements and points (1st=3, 2nd=2, 3rd=1, rest=0)
+  const computePlacements = (winnerId: PlayerId | null): RoundPlacement[] => {
+    const all = [...playersRef.current];
+    const alive = all.filter((p) => p.isAlive).sort((a, b) => b.hp - a.hp);
+    
+    // Sort dead by reverse deathOrder (longest survivor among dead placed higher)
+    const dead = all.filter((p) => !p.isAlive).sort((a, b) => {
+      const idxA = deathOrderRef.current.indexOf(a.id);
+      const idxB = deathOrderRef.current.indexOf(b.id);
+      return idxB - idxA;
+    });
+
+    let combined = [...alive, ...dead];
+
+    // If specific round winner, ensure they are rank 1
+    if (winnerId !== null) {
+      const winIdx = combined.findIndex((p) => p.id === winnerId);
+      if (winIdx > 0) {
+        const [w] = combined.splice(winIdx, 1);
+        combined.unshift(w);
+      }
+    }
+
+    return combined.map((p, idx) => {
+      const rank = idx + 1;
+      let pointsEarned = 0;
+      if (rank === 1) pointsEarned = 3; // الفائز الاول 3 نقاط
+      else if (rank === 2) pointsEarned = 2; // الثاني 2
+      else if (rank === 3) pointsEarned = 1; // الثالث 1
+      else pointsEarned = 0; // البقية 0
+
+      return {
+        playerId: p.id,
+        rank,
+        pointsEarned,
+        hpLeft: Math.max(0, Math.round(p.hp)),
+        isAlive: p.isAlive,
+      };
+    });
+  };
+
   // Helper: Check Round End
   const checkRoundOverConditions = () => {
     if (roundEndingRef.current) return;
+
+    // 0. Max 1:00 min timer limit: If 1 minute passes, player with highest HP wins!
+    // "الوقت لكل مباراة اريدها ان تكون max 1:00 min فقط اذا مرة دقيقة ولم تنتهي المباراة يربح صاحب اكبر hp دم"
+    if (roundTimerRef.current >= 60) {
+      roundEndingRef.current = true;
+      sounds.playVictory();
+
+      const alive = playersRef.current.filter((p) => p.isAlive);
+      let winnerId: PlayerId | null = null;
+
+      if (settings.mode === 'team_deathmatch') {
+        const aliveRed = alive.filter((p) => p.team === 'red');
+        const aliveBlue = alive.filter((p) => p.team === 'blue');
+        const totalRedHp = aliveRed.reduce((sum, p) => sum + p.hp, 0);
+        const totalBlueHp = aliveBlue.reduce((sum, p) => sum + p.hp, 0);
+        if (totalRedHp > totalBlueHp && aliveRed.length > 0) {
+          winnerId = aliveRed[0].id;
+        } else if (totalBlueHp > totalRedHp && aliveBlue.length > 0) {
+          winnerId = aliveBlue[0].id;
+        }
+      } else if (alive.length > 0) {
+        const sortedByHp = [...alive].sort((a, b) => b.hp - a.hp);
+        winnerId = sortedByHp[0].id;
+        const winnerCfg = playerConfigs.find((c) => c.id === winnerId);
+
+        floatingTextsRef.current.push({
+          id: Math.random().toString(),
+          text: `TIME'S UP! ${winnerCfg?.name.toUpperCase() || 'PLAYER'} WINS (HIGHEST HP: ${Math.round(sortedByHp[0].hp)})!`,
+          x: sortedByHp[0].x,
+          y: sortedByHp[0].y - 55,
+          vy: -1.5,
+          color: '#fbbf24',
+          alpha: 1,
+          scale: 1.35,
+        });
+      }
+
+      const placements = computePlacements(winnerId);
+      setTimeout(() => {
+        onRoundOver(winnerId, placements);
+      }, 1000);
+      return;
+    }
 
     // 1. King of the hill points check
     if (settings.mode === 'king_of_the_hill') {
       for (const cfg of playerConfigs) {
         if (cfg.points >= 100) {
           roundEndingRef.current = true;
-          onRoundOver(cfg.id);
+          const placements = computePlacements(cfg.id);
+          onRoundOver(cfg.id, placements);
           return;
         }
       }
@@ -1121,22 +1219,25 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       if (aliveRed.length === 0 && aliveBlue.length > 0) {
         roundEndingRef.current = true;
         sounds.playVictory();
+        const placements = computePlacements(aliveBlue[0].id);
         setTimeout(() => {
-          onRoundOver(aliveBlue[0].id);
+          onRoundOver(aliveBlue[0].id, placements);
         }, 1000);
         return;
       } else if (aliveBlue.length === 0 && aliveRed.length > 0) {
         roundEndingRef.current = true;
         sounds.playVictory();
+        const placements = computePlacements(aliveRed[0].id);
         setTimeout(() => {
-          onRoundOver(aliveRed[0].id);
+          onRoundOver(aliveRed[0].id, placements);
         }, 1000);
         return;
       } else if (aliveRed.length === 0 && aliveBlue.length === 0) {
         roundEndingRef.current = true;
         sounds.playVictory();
+        const placements = computePlacements(null);
         setTimeout(() => {
-          onRoundOver(null);
+          onRoundOver(null, placements);
         }, 1000);
         return;
       }
@@ -1148,32 +1249,30 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       const alivePlayers = playersRef.current.filter((p) => p.isAlive);
       const uninfected = alivePlayers.filter((p) => !p.isInfected);
 
-      // Continuously record the last standing survivor if only 1 remains
       if (uninfected.length === 1) {
         lastSurvivorIdRef.current = uninfected[0].id;
       }
 
-      // If all survivors have been infected:
-      // The LAST SURVIVOR who held out wins the round!
       if (uninfected.length === 0) {
         roundEndingRef.current = true;
         sounds.playVictory();
         const winner = lastSurvivorIdRef.current;
+        const placements = computePlacements(winner);
         setTimeout(() => {
-          onRoundOver(winner);
+          onRoundOver(winner, placements);
         }, 1000);
         return;
       }
 
-      // If survival timer expires (45 seconds of survival):
-      // Survivors win! (The last survivor or first live survivor gets the win)
+      // Infection round limit (45s)
       const infectionRoundLimit = 45;
       if (roundTimerRef.current >= infectionRoundLimit && uninfected.length > 0) {
         roundEndingRef.current = true;
         sounds.playVictory();
         const winner = lastSurvivorIdRef.current || uninfected[0].id;
+        const placements = computePlacements(winner);
         setTimeout(() => {
-          onRoundOver(winner);
+          onRoundOver(winner, placements);
         }, 1000);
         return;
       }
@@ -1182,14 +1281,28 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
     // 4. Survivor check (for FFA / Battle Royale / Roulette / Chaos)
     const alivePlayers = playersRef.current.filter((p) => p.isAlive);
-    const totalEnabled = playerConfigs.filter((p) => p.enabled).length;
+    const maxAllowed = settings.mode === 'battle_royale' ? 6 : 4;
+    const totalEnabled = playerConfigs.slice(0, maxAllowed).filter((p) => p.enabled).length;
 
-    if (alivePlayers.length <= 1 && totalEnabled >= 2) {
+    if (totalEnabled <= 1) {
+      if (alivePlayers.length === 0) {
+        roundEndingRef.current = true;
+        sounds.playVictory();
+        const placements = computePlacements(null);
+        setTimeout(() => {
+          onRoundOver(null, placements);
+        }, 1000);
+      }
+      return;
+    }
+
+    if (alivePlayers.length <= 1) {
       roundEndingRef.current = true;
       const winner = alivePlayers.length === 1 ? alivePlayers[0].id : null;
       sounds.playVictory();
+      const placements = computePlacements(winner);
       setTimeout(() => {
-        onRoundOver(winner);
+        onRoundOver(winner, placements);
       }, 1000);
     }
   };

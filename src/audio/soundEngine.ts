@@ -528,40 +528,82 @@ class SoundEngine {
   private scheduleBGM() {
     if (!this.bgmPlaying || !this.ctx || !this.bgmMasterGain) return;
 
-    // Tempo: 128 BPM -> 16th note = 60 / 128 / 4 = 0.1171875s
-    const secondsPer16th = 0.1171875;
+    // Tempo: 130 BPM -> 16th note = 60 / 130 / 4 = 0.1153846s
+    const secondsPer16th = 0.1153846;
     const scheduleAheadTime = 0.25;
 
-    // Bassline root notes (C minor pentatonic progression: C -> Eb -> F -> G)
-    const bassPatterns = [
-      130.81, 0, 130.81, 0, 155.56, 0, 174.61, 0,
-      130.81, 0, 130.81, 130.81, 196.00, 0, 174.61, 155.56,
-      116.54, 0, 116.54, 0, 130.81, 0, 155.56, 0,
-      130.81, 130.81, 0, 130.81, 196.00, 174.61, 155.56, 130.81,
+    // 128-Step Dynamic Bassline (D Minor / F Major Pentatonic Stickman Theme)
+    // 8 full bars of rich variety, zero boring repetition
+    const bassPatterns128 = [
+      // Bar 1 (Steps 0-15): D Minor punchy groove
+      146.83, 0, 146.83, 0, 146.83, 0, 174.61, 0, 146.83, 0, 146.83, 174.61, 196.00, 0, 174.61, 0,
+      // Bar 2 (Steps 16-31): Bb Major to C Major drive
+      116.54, 0, 116.54, 0, 116.54, 146.83, 174.61, 0, 130.81, 0, 130.81, 0, 164.81, 0, 196.00, 220.00,
+      // Bar 3 (Steps 32-47): D Minor rising power
+      146.83, 0, 146.83, 146.83, 174.61, 0, 196.00, 0, 220.00, 0, 196.00, 0, 174.61, 0, 146.83, 0,
+      // Bar 4 (Steps 48-63): G Minor to A Minor turnaround
+      98.00, 0, 98.00, 130.81, 146.83, 0, 174.61, 0, 110.00, 0, 110.00, 146.83, 164.81, 0, 220.00, 196.00,
+      // Bar 5 (Steps 64-79): Funky slap breakdown
+      146.83, 146.83, 0, 146.83, 293.66, 0, 174.61, 0, 146.83, 0, 130.81, 0, 116.54, 0, 130.81, 0,
+      // Bar 6 (Steps 80-95): Syncopated chromatic bounce
+      116.54, 0, 146.83, 0, 174.61, 0, 196.00, 174.61, 130.81, 0, 164.81, 0, 196.00, 0, 220.00, 0,
+      // Bar 7 (Steps 96-111): Epic Climactic Chorus (F to C to Dm)
+      174.61, 0, 174.61, 0, 220.00, 0, 261.63, 0, 130.81, 0, 130.81, 0, 196.00, 0, 261.63, 0,
+      // Bar 8 (Steps 112-127): Grand Finale Roll leading back to Bar 1
+      116.54, 0, 116.54, 146.83, 174.61, 0, 196.00, 0, 110.00, 146.83, 164.81, 196.00, 220.00, 246.94, 261.63, 277.18,
     ];
 
-    // Melodic Arp Notes (Hz)
-    const arpNotes = [
-      261.63, 311.13, 392.00, 523.25, 392.00, 311.13, 261.63, 392.00,
-      311.13, 392.00, 523.25, 622.25, 523.25, 392.00, 311.13, 392.00,
-      233.08, 293.66, 349.23, 466.16, 349.23, 293.66, 233.08, 349.23,
-      261.63, 311.13, 392.00, 523.25, 587.33, 523.25, 392.00, 311.13,
+    // 128-Step Melodic Lead (Catchy, energetic, memorable stickman hero battle melody)
+    const leadNotes128 = [
+      // Bar 1: Heroic Intro Call
+      293.66, 0, 349.23, 0, 440.00, 0, 392.00, 0, 349.23, 0, 293.66, 0, 261.63, 0, 293.66, 0,
+      // Bar 2: Response & Arp Flourish
+      349.23, 0, 440.00, 0, 523.25, 0, 440.00, 392.00, 349.23, 392.00, 440.00, 0, 523.25, 0, 587.33, 0,
+      // Bar 3: High Energy Battle Hook
+      587.33, 0, 523.25, 0, 440.00, 0, 392.00, 0, 440.00, 0, 523.25, 0, 587.33, 659.25, 587.33, 0,
+      // Bar 4: Cascading Turnaround
+      523.25, 0, 440.00, 0, 392.00, 0, 349.23, 0, 329.63, 0, 349.23, 0, 392.00, 0, 440.00, 0,
+      // Bar 5: Funky Octave Bounces
+      293.66, 587.33, 0, 293.66, 587.33, 0, 523.25, 0, 466.16, 0, 392.00, 0, 440.00, 0, 349.23, 0,
+      // Bar 6: Playful Syncopations
+      392.00, 0, 440.00, 0, 466.16, 0, 523.25, 0, 587.33, 0, 523.25, 0, 440.00, 0, 392.00, 349.23,
+      // Bar 7: Climax Euphoric Chorus
+      698.46, 0, 659.25, 0, 587.33, 0, 523.25, 0, 587.33, 0, 659.25, 0, 698.46, 0, 783.99, 0,
+      // Bar 8: Dramatic Final Descent & Resolution
+      880.00, 0, 783.99, 0, 698.46, 0, 587.33, 0, 523.25, 440.00, 392.00, 349.23, 293.66, 0, 0, 0,
     ];
+
+    // Chords on bar boundaries (Hz root, third, fifth)
+    const chordPadBars: Record<number, number[]> = {
+      0: [146.83, 220.00, 349.23],   // Dm (D, A, F)
+      16: [116.54, 174.61, 233.08],  // Bb (Bb, F, D)
+      32: [146.83, 220.00, 349.23],  // Dm
+      48: [98.00, 146.83, 196.00],   // Gm
+      64: [146.83, 220.00, 293.66],  // Dm
+      80: [130.81, 196.00, 261.63],  // C
+      96: [174.61, 261.63, 349.23],  // F
+      112: [110.00, 164.81, 220.00], // A
+    };
 
     while (this.nextNoteTime < this.ctx.currentTime + scheduleAheadTime) {
       const t = this.nextNoteTime;
-      const step = this.bgmStep % 32;
+      const step = this.bgmStep % 128;
 
       if (this.musicEnabled) {
-        // 1. Kick on beats 0, 4, 8, 12, 16, 20, 24, 28
-        if (step % 4 === 0) {
+        // 1. Kick Drum (tight, punchy 808 drop)
+        const isKickBeat =
+          step % 8 === 0 || // Beats 0, 8, 16...
+          (step % 16 === 10) || // Syncopated funk kick
+          (step >= 120 && step % 2 === 0); // Fast drum build roll at end of 128-step phrase
+
+        if (isKickBeat) {
           const kickOsc = this.ctx.createOscillator();
           const kickGain = this.ctx.createGain();
           kickOsc.type = 'sine';
-          kickOsc.frequency.setValueAtTime(140, t);
-          kickOsc.frequency.exponentialRampToValueAtTime(38, t + 0.08);
+          kickOsc.frequency.setValueAtTime(155, t);
+          kickOsc.frequency.exponentialRampToValueAtTime(36, t + 0.08);
 
-          kickGain.gain.setValueAtTime(0.38, t);
+          kickGain.gain.setValueAtTime(0.35, t);
           kickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
 
           kickOsc.connect(kickGain);
@@ -570,15 +612,16 @@ class SoundEngine {
           kickOsc.stop(t + 0.1);
         }
 
-        // 2. Snare / Clack on beats 4, 12, 20, 28
-        if (step % 8 === 4) {
+        // 2. Snare Drum (crisp acoustic-style clack with dual-tone snap)
+        const isSnareBeat = step % 8 === 4 || (step >= 124);
+        if (isSnareBeat) {
           const snareOsc = this.ctx.createOscillator();
           const snareGain = this.ctx.createGain();
           snareOsc.type = 'triangle';
-          snareOsc.frequency.setValueAtTime(220, t);
-          snareOsc.frequency.exponentialRampToValueAtTime(80, t + 0.07);
+          snareOsc.frequency.setValueAtTime(240, t);
+          snareOsc.frequency.exponentialRampToValueAtTime(75, t + 0.07);
 
-          snareGain.gain.setValueAtTime(0.2, t);
+          snareGain.gain.setValueAtTime(0.22, t);
           snareGain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
 
           snareOsc.connect(snareGain);
@@ -587,32 +630,33 @@ class SoundEngine {
           snareOsc.stop(t + 0.09);
         }
 
-        // 3. Hi-hat on offbeats
-        if (step % 2 === 1) {
+        // 3. Hi-Hat (fluttering chiptune rhythm)
+        const isHatBeat = step % 2 === 1 || step % 4 === 2;
+        if (isHatBeat) {
           const hatOsc = this.ctx.createOscillator();
           const hatGain = this.ctx.createGain();
           hatOsc.type = 'sawtooth';
-          hatOsc.frequency.setValueAtTime(9500, t);
+          hatOsc.frequency.setValueAtTime(step % 4 === 2 ? 8800 : 10500, t);
 
-          hatGain.gain.setValueAtTime(0.06, t);
+          hatGain.gain.setValueAtTime(step % 4 === 2 ? 0.07 : 0.04, t);
           hatGain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
 
           hatOsc.connect(hatGain);
           hatGain.connect(this.bgmMasterGain);
           hatOsc.start(t);
-          hatOsc.stop(t + 0.05);
+          hatOsc.stop(t + 0.045);
         }
 
-        // 4. Bassline
-        const bassFreq = bassPatterns[step];
+        // 4. Bassline (warm, driving synth bass)
+        const bassFreq = bassPatterns128[step];
         if (bassFreq > 0) {
           const bassOsc = this.ctx.createOscillator();
           const bassGain = this.ctx.createGain();
           bassOsc.type = 'sawtooth';
           bassOsc.frequency.setValueAtTime(bassFreq, t);
 
-          bassGain.gain.setValueAtTime(0.18, t);
-          bassGain.gain.exponentialRampToValueAtTime(0.001, t + secondsPer16th * 0.9);
+          bassGain.gain.setValueAtTime(0.19, t);
+          bassGain.gain.exponentialRampToValueAtTime(0.001, t + secondsPer16th * 0.88);
 
           bassOsc.connect(bassGain);
           bassGain.connect(this.bgmMasterGain);
@@ -620,21 +664,43 @@ class SoundEngine {
           bassOsc.stop(t + secondsPer16th);
         }
 
-        // 5. Arp Lead (smooth arcade chiptune vibe)
-        const arpFreq = arpNotes[step];
-        if (arpFreq) {
-          const arpOsc = this.ctx.createOscillator();
-          const arpGain = this.ctx.createGain();
-          arpOsc.type = 'square';
-          arpOsc.frequency.setValueAtTime(arpFreq, t);
+        // 5. Melodic Lead Hook (smooth arcade vibrato chiptune)
+        const leadFreq = leadNotes128[step];
+        if (leadFreq > 0) {
+          const leadOsc = this.ctx.createOscillator();
+          const leadGain = this.ctx.createGain();
+          leadOsc.type = 'square';
+          leadOsc.frequency.setValueAtTime(leadFreq, t);
+          // Subtle vibrato shimmer
+          leadOsc.frequency.linearRampToValueAtTime(leadFreq * 1.008, t + secondsPer16th * 0.4);
+          leadOsc.frequency.linearRampToValueAtTime(leadFreq, t + secondsPer16th * 0.7);
 
-          arpGain.gain.setValueAtTime(0.07, t);
-          arpGain.gain.exponentialRampToValueAtTime(0.001, t + secondsPer16th * 0.75);
+          leadGain.gain.setValueAtTime(0.08, t);
+          leadGain.gain.exponentialRampToValueAtTime(0.001, t + secondsPer16th * 0.82);
 
-          arpOsc.connect(arpGain);
-          arpGain.connect(this.bgmMasterGain);
-          arpOsc.start(t);
-          arpOsc.stop(t + secondsPer16th * 0.8);
+          leadOsc.connect(leadGain);
+          leadGain.connect(this.bgmMasterGain);
+          leadOsc.start(t);
+          leadOsc.stop(t + secondsPer16th * 0.85);
+        }
+
+        // 6. Lush Atmosphere Pad on bar beginnings
+        if (chordPadBars[step]) {
+          const chord = chordPadBars[step];
+          chord.forEach((freq) => {
+            const padOsc = this.ctx!.createOscillator();
+            const padGain = this.ctx!.createGain();
+            padOsc.type = 'triangle';
+            padOsc.frequency.setValueAtTime(freq, t);
+
+            padGain.gain.setValueAtTime(0.035, t);
+            padGain.gain.exponentialRampToValueAtTime(0.001, t + secondsPer16th * 14);
+
+            padOsc.connect(padGain);
+            padGain.connect(this.bgmMasterGain!);
+            padOsc.start(t);
+            padOsc.stop(t + secondsPer16th * 15);
+          });
         }
       }
 

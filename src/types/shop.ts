@@ -75,6 +75,7 @@ export interface PlayerWallet {
   equippedShoes: string | null;
   equippedWeaponSkin: string | null;
   redeemedCodes?: string[];
+  unlockedFreeBank?: boolean;
 }
 
 export const HATS: ShopHat[] = [
@@ -356,11 +357,11 @@ export const WEAPON_SKINS: ShopWeaponSkin[] = [
   {
     id: 'sword_celestial_god',
     name: 'Celestial Sovereign Blade',
-    nameAr: 'سيف الآلهة الكوني المشع',
+    nameAr: 'سيف الملوك الكوني المشع',
     weaponType: 'sword',
     price: 8000,
     currency: 'gems',
-    description: 'نصل كوني مقدس من ألماس النجوم، يشع طاقة أثيرية زرقاء وذهبية ملكية تخطف الأبصار.',
+    description: 'نصل كوني أسطوري من ألماس النجوم، يشع طاقة أثيرية زرقاء وذهبية ملكية تخطف الأبصار.',
     primaryColor: '#1e1b4b',
     secondaryColor: '#fbbf24',
     glowColor: '#60a5fa',
@@ -415,8 +416,8 @@ export const WEAPON_SKINS: ShopWeaponSkin[] = [
   },
   {
     id: 'rocket_doomsday_cannon',
-    name: 'Doomsday Titan Railgun',
-    nameAr: 'مدفع يوم القيامة المضيء',
+    name: 'Titan Fire Railgun',
+    nameAr: 'مدفع النار المضيء',
     weaponType: 'rocket',
     price: 6000,
     currency: 'gems',
@@ -450,7 +451,7 @@ export const WEAPON_SKINS: ShopWeaponSkin[] = [
     weaponType: 'rope',
     price: 4500,
     currency: 'gems',
-    description: 'سلاسل أثيرية مشعة بطاقة أرواح الأبطال القدامى تتلألأ بهالة مائية سماوية تتنفس بالحياة.',
+    description: 'سلاسل أثيرية مشعة بطاقة أرواح الأبطال القدامى تتلألأ بهالة مائية تتنفس بالحياة.',
     primaryColor: '#042f2e',
     secondaryColor: '#0d9488',
     glowColor: '#2dd4bf',
@@ -488,10 +489,10 @@ export const WEAPON_SKINS: ShopWeaponSkin[] = [
     effect: 'dragon',
   },
 
-  // 7. Supreme Ultimate God Weapon (10,000 GEMS)
+  // 7. Supreme Ultimate Apex Weapon (10,000 GEMS)
   {
     id: 'weapon_supreme_infinity',
-    name: 'Infinity Genesis God Weapon',
+    name: 'Infinity Genesis Sovereign Weapon',
     nameAr: 'سلاح اللانهاية الكوني المطلق',
     weaponType: 'all',
     price: 10000,

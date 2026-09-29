@@ -16,9 +16,12 @@ import {
   Coins,
   Gem,
   KeyRound,
+  Sparkles,
 } from 'lucide-react';
 import { sounds } from '../audio/soundEngine';
 import { StickmanGamer, StickmanParkour } from './StickmanIcons';
+import { PlayerWallet } from '../types/shop';
+import { FreeCurrencyBankModal } from './FreeCurrencyBankModal';
 
 interface MainMenuProps {
   onPlay: () => void;
@@ -28,6 +31,8 @@ interface MainMenuProps {
   onOpenRedeemCode: () => void;
   coins?: number;
   gems?: number;
+  wallet?: PlayerWallet;
+  onUpdateWallet?: (wallet: PlayerWallet) => void;
 }
 
 export const MainMenu: React.FC<MainMenuProps> = ({
@@ -38,10 +43,13 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onOpenRedeemCode,
   coins = 0,
   gems = 0,
+  wallet,
+  onUpdateWallet,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [musicOn, setMusicOn] = useState<boolean>(sounds.musicEnabled);
   const [showExitModal, setShowExitModal] = useState<boolean>(false);
+  const [showFreeBankModal, setShowFreeBankModal] = useState<boolean>(false);
 
   useEffect(() => {
     const handleFsChange = () => {
@@ -246,6 +254,23 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             </span>
           </button>
 
+          {/* DEVELOPER FREE BANK TAB (تبويبة كود 36987 لجلب رصيد مجاني غير محدود) */}
+          {wallet?.unlockedFreeBank && (
+            <button
+              onClick={() => {
+                sounds.playButton();
+                setShowFreeBankModal(true);
+              }}
+              className="group relative flex items-center justify-center gap-3 w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:from-purple-500 hover:to-amber-400 text-white font-black text-base sm:text-lg tracking-wider uppercase shadow-xl shadow-purple-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all border border-pink-400/60 cursor-pointer animate-pulse"
+            >
+              <Sparkles className="w-5 h-5 text-yellow-300 transition-transform group-hover:rotate-45" />
+              <span>بنك الجواهر والنقود المجاني</span>
+              <span className="text-[10px] bg-slate-950 text-amber-300 font-black px-2.5 py-0.5 rounded-full ml-1 shadow-sm">
+                36987 مفعل
+              </span>
+            </button>
+          )}
+
           {/* SETTINGS BUTTON (إعدادات) */}
           <button
             onClick={() => {
@@ -332,6 +357,16 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Free Currency Developer Generator Modal (Code 36987) */}
+      {wallet && onUpdateWallet && (
+        <FreeCurrencyBankModal
+          isOpen={showFreeBankModal}
+          onClose={() => setShowFreeBankModal(false)}
+          wallet={wallet}
+          onUpdateWallet={onUpdateWallet}
+        />
       )}
     </div>
   );

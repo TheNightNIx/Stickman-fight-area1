@@ -234,3 +234,12 @@ export interface GameSettings {
   soundEnabled: boolean;
   aiDifficulty: AIDifficulty;
 }
+
+export interface RoundPlacement {
+  playerId: PlayerId;
+  rank: number; // 1, 2, 3, 4...
+  pointsEarned: number; // 3 for 1st, 2 for 2nd, 1 for 3rd, 0 for others
+  killsThisRound?: number;
+  hpLeft: number;
+  isAlive: boolean;
+}

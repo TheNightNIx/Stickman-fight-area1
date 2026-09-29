@@ -11,6 +11,7 @@ import {
   PlayerState,
   ActiveEvent,
   PlayerKeyBindingsMap,
+  RoundPlacement,
 } from './types/game';
 import { GameCanvas } from './components/GameCanvas';
 import { HUD } from './components/HUD';
@@ -167,6 +168,7 @@ export default function App() {
 
   const [currentRound, setCurrentRound] = useState<number>(1);
   const [winnerId, setWinnerId] = useState<PlayerId | null>(null);
+  const [roundPlacements, setRoundPlacements] = useState<RoundPlacement[]>([]);
   const [matchChampionId, setMatchChampionId] = useState<PlayerId | null>(null);
   const [winningTeam, setWinningTeam] = useState<'red' | 'blue' | null>(null);
   const [infectionOutcome, setInfectionOutcome] = useState<'zombies' | 'survivors' | null>(null);
@@ -222,11 +224,15 @@ export default function App() {
 
   const handleStartGame = () => {
     sounds.stopBGM(); // Stop lobby background music during match so it does not loop incessantly
+    const maxAllowed = settings.mode === 'battle_royale' ? 6 : 4;
+
     // Reset round wins and points, and randomize cosmetics for CPU bots entering the match
     setPlayerConfigs((prev) =>
       prev.map((p) => {
+        const isOutOfModeBounds = p.id > maxAllowed;
         const resetData = {
           ...p,
+          enabled: isOutOfModeBounds ? false : p.enabled,
           score: 0,
           points: 0,
           kills: 0,
@@ -245,6 +251,7 @@ export default function App() {
     );
     setCurrentRound(1);
     setWinnerId(null);
+    setRoundPlacements([]);
     setMatchChampionId(null);
     setWinningTeam(null);
     setInfectionOutcome(null);
@@ -253,12 +260,29 @@ export default function App() {
   };
 
   const handleRoundOver = useCallback(
-    (roundWinner: PlayerId | null) => {
+    (roundWinner: PlayerId | null, placements?: RoundPlacement[]) => {
       setWinnerId(roundWinner);
+      if (placements && placements.length > 0) {
+        setRoundPlacements(placements);
+      }
 
       setPlayerConfigs((prev) => {
         let champ: PlayerId | null = null;
         let updated = [...prev];
+
+        // Award points earned according to placements (1st = 3, 2nd = 2, 3rd = 1, rest = 0)
+        if (placements && placements.length > 0) {
+          updated = updated.map((p) => {
+            const pl = placements.find((item) => item.playerId === p.id);
+            if (pl) {
+              return {
+                ...p,
+                points: (p.points || 0) + pl.pointsEarned,
+              };
+            }
+            return p;
+          });
+        }
 
         if (settings.mode === 'team_deathmatch') {
           // Find winning team from roundWinner
@@ -266,7 +290,7 @@ export default function App() {
           const winTeam = winningP?.team || 'red';
           setWinningTeam(winTeam);
 
-          updated = prev.map((p) =>
+          updated = updated.map((p) =>
             p.enabled && p.team === winTeam ? { ...p, score: p.score + 1 } : p
           );
 
@@ -278,7 +302,7 @@ export default function App() {
         } else if (settings.mode === 'infection') {
           // The last survivor standing outlasted all others and takes the round win!
           setInfectionOutcome('survivors');
-          updated = prev.map((p) =>
+          updated = updated.map((p) =>
             p.id === roundWinner ? { ...p, score: p.score + 1 } : p
           );
 
@@ -292,7 +316,7 @@ export default function App() {
           // FFA / Battle Royale / Roulette / Chaos
           setWinningTeam(null);
           setInfectionOutcome(null);
-          updated = prev.map((p) =>
+          updated = updated.map((p) =>
             p.id === roundWinner ? { ...p, score: p.score + 1 } : p
           );
 
@@ -306,7 +330,7 @@ export default function App() {
 
         // Also check if current round reached max total rounds (e.g. round 3 completed)
         if (!champ && currentRound >= settings.roundsToWin) {
-          // Find player with highest score
+          // Find player with highest score or points
           const sorted = [...updated]
             .filter((p) => p.enabled)
             .sort((a, b) => b.score - a.score || (b.points || 0) - (a.points || 0));
@@ -331,7 +355,7 @@ export default function App() {
         return updated;
       });
     },
-    [currentRound, settings.roundsToWin, settings.mode, hudData.players]
+    [currentRound, settings.roundsToWin, settings.mode]
   );
 
   const handleNextRound = () => {
@@ -405,6 +429,8 @@ export default function App() {
           onOpenRedeemCode={() => setShowRedeemCodeModal(true)}
           coins={wallet.coins}
           gems={wallet.gems}
+          wallet={wallet}
+          onUpdateWallet={setWallet}
         />
       )}
 
@@ -458,6 +484,7 @@ export default function App() {
           onToggleSound={handleToggleSound}
           onTogglePause={() => setIsPaused((prev) => !prev)}
           onOpenControls={() => setShowControlsGuide(true)}
+          onOpenSettings={() => setShowSettingsModal(true)}
           onRestartMatch={handleRestartMatch}
           onBackToLobby={() => setGameState('LOBBY')}
           wallet={wallet}
@@ -470,6 +497,7 @@ export default function App() {
           winnerId={winnerId}
           matchChampionId={matchChampionId}
           playerConfigs={playerConfigs}
+          placements={roundPlacements}
           currentRound={currentRound}
           maxRounds={settings.roundsToWin}
           gameMode={settings.mode}

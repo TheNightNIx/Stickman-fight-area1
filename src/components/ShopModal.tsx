@@ -777,6 +777,8 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   const [selectedPlayerId, setSelectedPlayerId] = useState<PlayerId>(1);
   const [showHeightCompare, setShowHeightCompare] = useState<boolean>(false);
   const [weaponFilter, setWeaponFilter] = useState<string>('all');
+  const [filterType, setFilterType] = useState<'all' | 'coins' | 'gems' | 'owned'>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(
     null
   );
@@ -986,7 +988,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/90 backdrop-blur-xl select-none animate-fade-in">
-      <div className="relative w-full max-w-5xl h-[92vh] max-h-[860px] bg-slate-900 border border-slate-800 rounded-3xl shadow-[0_0_60px_rgba(0,0,0,0.85)] flex flex-col overflow-hidden">
+      <div className="relative w-full max-w-7xl h-[95vh] max-h-[960px] bg-slate-900 border border-slate-800 rounded-3xl shadow-[0_0_80px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden">
         {/* ============================================================== */}
         {/* HEADER: TITLE, WALLET (COINS & GEMS) AND CLOSE                 */}
         {/* ============================================================== */}
@@ -1281,6 +1283,51 @@ export const ShopModal: React.FC<ShopModalProps> = ({
         </div>
 
         {/* ============================================================== */}
+        {/* QUICK FILTER & SEARCH BAR                                      */}
+        {/* ============================================================== */}
+        <div className="shrink-0 px-6 py-2.5 bg-slate-950/80 border-b border-slate-800/80 flex items-center justify-between flex-wrap gap-2.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[11px] font-bold text-slate-400">تصفية:</span>
+            {[
+              { id: 'all', label: 'الكل' },
+              { id: 'coins', label: 'نقود فقط' },
+              { id: 'gems', label: 'جواهر فقط' },
+              { id: 'owned', label: 'المملوكة فقط' },
+            ].map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setFilterType(f.id as any)}
+                className={`px-3 py-1 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                  filterType === f.id
+                    ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm'
+                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white hover:border-slate-700'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="بحث في المظاهر والأسلحة..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-slate-900 border border-slate-800 focus:border-sky-400 rounded-xl px-3 py-1 text-xs text-white placeholder-slate-500 focus:outline-none w-48 sm:w-60 shadow-inner"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="text-xs text-slate-400 hover:text-white px-1.5 cursor-pointer font-bold"
+              >
+                × مسح
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ============================================================== */}
         {/* MAIN BODY: ITEMS GRID + SCROLLABLE CONTAINER                   */}
         {/* ============================================================== */}
         <div className="custom-scrollbar overflow-y-auto flex-1 p-6 flex flex-col gap-6">
@@ -1310,8 +1357,18 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {HATS.map((hat) => {
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+                {HATS.filter((hat) => {
+                  const matchesSearch =
+                    !searchQuery ||
+                    hat.nameAr.includes(searchQuery) ||
+                    hat.name.toLowerCase().includes(searchQuery.toLowerCase());
+                  if (!matchesSearch) return false;
+                  if (filterType === 'coins') return hat.currency === 'coins';
+                  if (filterType === 'gems') return hat.currency === 'gems';
+                  if (filterType === 'owned') return wallet.purchasedHats.includes(hat.id);
+                  return true;
+                }).map((hat) => {
                   const isOwned = wallet.purchasedHats.includes(hat.id);
                   const isEquipped = targetPlayer.equippedHat === hat.id;
                   const canAfford =
@@ -1458,8 +1515,18 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {SKINS.map((skin) => {
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+                {SKINS.filter((skin) => {
+                  const matchesSearch =
+                    !searchQuery ||
+                    skin.nameAr.includes(searchQuery) ||
+                    skin.name.toLowerCase().includes(searchQuery.toLowerCase());
+                  if (!matchesSearch) return false;
+                  if (filterType === 'coins') return false; // all skins require gems
+                  if (filterType === 'gems') return true;
+                  if (filterType === 'owned') return wallet.purchasedSkins.includes(skin.id);
+                  return true;
+                }).map((skin) => {
                   const isOwned = wallet.purchasedSkins.includes(skin.id);
                   const isEquipped = targetPlayer.equippedSkin === skin.id;
                   const canAfford = wallet.gems >= skin.price;
@@ -1711,11 +1778,24 @@ export const ShopModal: React.FC<ShopModalProps> = ({
               </div>
 
               {/* Weapon Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
                 {WEAPON_SKINS.filter((skin) => {
-                  if (weaponFilter === 'all') return true;
-                  if (weaponFilter === 'all_weapons') return skin.weaponType === 'all';
-                  return skin.weaponType === weaponFilter;
+                  if (weaponFilter !== 'all') {
+                    if (weaponFilter === 'all_weapons') {
+                      if (skin.weaponType !== 'all') return false;
+                    } else if (skin.weaponType !== weaponFilter) {
+                      return false;
+                    }
+                  }
+                  const matchesSearch =
+                    !searchQuery ||
+                    skin.nameAr.includes(searchQuery) ||
+                    skin.name.toLowerCase().includes(searchQuery.toLowerCase());
+                  if (!matchesSearch) return false;
+                  if (filterType === 'coins') return false; // All weapon skins are purchased with gems
+                  if (filterType === 'gems') return true;
+                  if (filterType === 'owned') return (wallet.purchasedWeaponSkins || []).includes(skin.id);
+                  return true;
                 }).map((skin) => {
                   const isOwned = (wallet.purchasedWeaponSkins || []).includes(skin.id);
                   const isEquipped = targetPlayer.equippedWeaponSkin === skin.id;
@@ -1752,7 +1832,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                         </span>
                         {isGodTier && (
                           <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 via-rose-400 to-purple-400 text-slate-950 animate-pulse">
-                            سلاح الآلهة الأسطوري
+                            سلاح الأساطير الأعظم
                           </span>
                         )}
                       </div>

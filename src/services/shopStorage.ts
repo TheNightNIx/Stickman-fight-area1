@@ -110,6 +110,31 @@ export interface PromoCodeConfig {
 }
 
 export const PROMO_CODES: Record<string, PromoCodeConfig> = {
+  yoru: {
+    coins: 200,
+    gems: 100,
+    message: 'مبروك! تم تفعيل كود Yoru وحصلت على 100 جوهرة و 200 نقود بنجاح!',
+  },
+  nightnix: {
+    coins: 500,
+    gems: 500,
+    message: 'مبروك! تم تفعيل كود nightnix وحصلت على 500 جوهرة و 500 نقود بنجاح!',
+  },
+  '0000': {
+    coins: 0,
+    gems: 100000,
+    message: 'مبروك! تم تفعيل كود 0000 وحصلت على 100,000 جوهرة بنجاح!',
+  },
+  '14789': {
+    coins: 0,
+    gems: 500,
+    message: 'مبروك! تم تفعيل كود 14789 وحصلت على 500 جوهرة بنجاح!',
+  },
+  '36987': {
+    coins: 10000,
+    gems: 5000,
+    message: 'مبروك! تم تفعيل كود 36987 بنجاح! تم فتح تبويبة (بنك الجواهر والنقود المجاني) في صفحة البداية!',
+  },
   niiro: {
     coins: 2000,
     gems: 100,
@@ -134,10 +159,11 @@ export const PROMO_CODES: Record<string, PromoCodeConfig> = {
 
 /**
  * Validates and activates promo codes:
- * - "niiro": 100 gems & 2000 coins
- * - "zero": 1000 gems & 0 coins
- * - "mr001": 500 gems & 3000 coins
- * - "thenightnix": 1000 gems & 5000 coins
+ * - "Yoru": 100 gems & 200 coins
+ * - "nightnix": 500 gems & 500 coins
+ * - "0000": 100,000 gems & 0 coins
+ * - "14789": 500 gems & 0 coins
+ * - "36987": Unlocks Developer Free Currency Generator Tab on Main Menu!
  */
 export function redeemPromoCode(inputCode: string): {
   success: boolean;
@@ -165,6 +191,7 @@ export function redeemPromoCode(inputCode: string): {
       coins: currentWallet.coins + promo.coins,
       gems: currentWallet.gems + promo.gems,
       redeemedCodes: [...redeemedList, normalized],
+      unlockedFreeBank: normalized === '36987' ? true : currentWallet.unlockedFreeBank,
     };
 
     saveWallet(updated);
@@ -234,4 +261,19 @@ export function awardRoundRewards(isWinnerBonus: boolean = false): {
 
   saveWallet(updated);
   return { earnedCoins, earnedGems, newWallet: updated };
+}
+
+/**
+ * Free custom currency injection from developer bank unlocked by code 36987
+ */
+export function addCustomCurrency(coinsToAdd: number, gemsToAdd: number): PlayerWallet {
+  const current = loadWallet();
+  const updated: PlayerWallet = {
+    ...current,
+    coins: Math.max(0, current.coins + coinsToAdd),
+    gems: Math.max(0, current.gems + gemsToAdd),
+    unlockedFreeBank: true,
+  };
+  saveWallet(updated);
+  return updated;
 }
