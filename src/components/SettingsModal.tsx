@@ -12,6 +12,7 @@ import {
   HelpCircle,
   Sparkles,
   Bot,
+  Download,
 } from 'lucide-react';
 import { StickmanGamer, StickmanParkour, StickmanHero } from './StickmanIcons';
 
@@ -21,6 +22,7 @@ interface SettingsModalProps {
   settings: GameSettings;
   onUpdateSettings: (updates: Partial<GameSettings>) => void;
   onOpenControls: () => void;
+  onOpenExport?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -29,6 +31,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   settings,
   onUpdateSettings,
   onOpenControls,
+  onOpenExport,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [musicOn, setMusicOn] = useState<boolean>(sounds.musicEnabled);
@@ -225,17 +228,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {/* Controls Quick Access */}
-          <div className="pt-2">
+          <div className="pt-2 flex flex-col gap-2">
             <button
               onClick={() => {
                 onClose();
                 onOpenControls();
               }}
-              className="w-full py-3 bg-slate-800 hover:bg-slate-700/80 text-slate-200 border border-slate-700 rounded-2xl font-bold text-xs flex items-center justify-center gap-2.5 transition-all"
+              className="w-full py-3 bg-slate-800 hover:bg-slate-700/80 text-slate-200 border border-slate-700 rounded-2xl font-bold text-xs flex items-center justify-center gap-2.5 transition-all cursor-pointer"
             >
               <StickmanParkour className="w-5 h-5 text-cyan-400 shrink-0" />
               <span>عرض أزرار التحكم وحركات القتال (Controls Guide)</span>
             </button>
+
+            {onOpenExport && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenExport();
+                }}
+                className="w-full py-3 bg-gradient-to-r from-sky-950/70 to-indigo-950/70 hover:from-sky-900/80 hover:to-indigo-900/80 text-sky-300 border border-sky-500/40 rounded-2xl font-bold text-xs flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-sm"
+              >
+                <Download className="w-4 h-4 text-sky-400 shrink-0" />
+                <span>تصدير اللعبة والنسخ الاحتياطي الآمن (Export & Backup)</span>
+              </button>
+            )}
           </div>
         </div>
 

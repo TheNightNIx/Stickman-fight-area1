@@ -22,6 +22,7 @@ import { MainMenu } from './components/MainMenu';
 import { SettingsModal } from './components/SettingsModal';
 import { ShopModal } from './components/ShopModal';
 import { RedeemCodeModal } from './components/RedeemCodeModal';
+import { ExportGameModal } from './components/ExportGameModal';
 import { sounds } from './audio/soundEngine';
 import { loadSavedKeyBindings, saveKeyBindings } from './engine/keybindings';
 import {
@@ -127,6 +128,7 @@ export default function App() {
   const [wallet, setWallet] = useState<PlayerWallet>(loadWallet);
   const [showShopModal, setShowShopModal] = useState<boolean>(false);
   const [showRedeemCodeModal, setShowRedeemCodeModal] = useState<boolean>(false);
+  const [showExportModal, setShowExportModal] = useState<boolean>(false);
   const [lastRoundReward, setLastRoundReward] = useState<{ coins: number; gems: number }>({
     coins: 50,
     gems: 1,
@@ -427,6 +429,7 @@ export default function App() {
           onOpenControls={() => setShowControlsGuide(true)}
           onOpenShop={() => setShowShopModal(true)}
           onOpenRedeemCode={() => setShowRedeemCodeModal(true)}
+          onOpenExport={() => setShowExportModal(true)}
           coins={wallet.coins}
           gems={wallet.gems}
           wallet={wallet}
@@ -520,6 +523,10 @@ export default function App() {
           setShowSettingsModal(false);
           setShowControlsGuide(true);
         }}
+        onOpenExport={() => {
+          setShowSettingsModal(false);
+          setShowExportModal(true);
+        }}
       />
 
       {/* 7. Controls & Weapons Guide Modal */}
@@ -546,6 +553,16 @@ export default function App() {
         onClose={() => setShowRedeemCodeModal(false)}
         wallet={wallet}
         onUpdateWallet={setWallet}
+      />
+
+      {/* 10. Safe Game Export & Standalone Backup Modal */}
+      <ExportGameModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        wallet={wallet}
+        onUpdateWallet={setWallet}
+        playerConfigs={playerConfigs}
+        onUpdatePlayerConfig={handleUpdatePlayerConfig}
       />
     </div>
   );

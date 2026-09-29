@@ -27,6 +27,7 @@ import {
   ExternalLink,
   Swords,
   Sparkles,
+  Copy,
 } from 'lucide-react';
 import { StickmanGift, StickmanRuler } from './StickmanIcons';
 
@@ -782,6 +783,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(
     null
   );
+  const [showCopyMenu, setShowCopyMenu] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
@@ -984,6 +986,53 @@ export const ShopModal: React.FC<ShopModalProps> = ({
     });
     sounds.playButton();
     showFeedback(`تم خلع جميع المظاهر عن ${targetPlayer.name}`, 'success');
+  };
+
+  const handleCopyGearTo = (destinationId: PlayerId | 'all') => {
+    const gear = {
+      equippedHat: targetPlayer.equippedHat ?? null,
+      equippedSkin: targetPlayer.equippedSkin ?? null,
+      equippedShoes: targetPlayer.equippedShoes ?? null,
+      equippedWeaponSkin: targetPlayer.equippedWeaponSkin ?? null,
+    };
+
+    if (destinationId === 'all') {
+      playerConfigs.forEach((p) => {
+        if (p.id !== targetPlayer.id) {
+          onUpdatePlayerConfig(p.id, gear);
+        }
+      });
+      if (targetPlayer.id === 1) {
+        const updatedWallet: PlayerWallet = {
+          ...wallet,
+          equippedHat: gear.equippedHat,
+          equippedSkin: gear.equippedSkin,
+          equippedShoes: gear.equippedShoes,
+          equippedWeaponSkin: gear.equippedWeaponSkin,
+        };
+        onUpdateWallet(updatedWallet);
+        saveWallet(updatedWallet);
+      }
+      sounds.playPowerUp();
+      showFeedback(`تم نسخ مظهر وتجهيزات ${targetPlayer.name} إلى كافة المقاتلين بنجاح!`, 'success');
+    } else {
+      onUpdatePlayerConfig(destinationId, gear);
+      if (destinationId === 1) {
+        const updatedWallet: PlayerWallet = {
+          ...wallet,
+          equippedHat: gear.equippedHat,
+          equippedSkin: gear.equippedSkin,
+          equippedShoes: gear.equippedShoes,
+          equippedWeaponSkin: gear.equippedWeaponSkin,
+        };
+        onUpdateWallet(updatedWallet);
+        saveWallet(updatedWallet);
+      }
+      const destP = playerConfigs.find((p) => p.id === destinationId);
+      sounds.playPowerUp();
+      showFeedback(`تم نسخ مظهر ${targetPlayer.name} إلى ${destP?.name || `P${destinationId}`} بنجاح!`, 'success');
+    }
+    setShowCopyMenu(false);
   };
 
   return (
@@ -1197,7 +1246,57 @@ export const ShopModal: React.FC<ShopModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 relative">
+            {/* Copy / Duplicate Gear Button ("نسخ بعضها البعض") */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  sounds.playButton();
+                  setShowCopyMenu((prev) => !prev);
+                }}
+                className="px-3 py-1.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                title="نسخ مظهر وسكنات هذا المقاتل وتطبيقها على مقاتل آخر"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>نسخ المظهر لآخر</span>
+              </button>
+
+              {/* Copy Menu Dropdown */}
+              {showCopyMenu && (
+                <div className="absolute top-full right-0 mt-1.5 w-60 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-2 z-50 flex flex-col gap-1 text-right animate-fade-in">
+                  <div className="px-2 py-1 text-[11px] font-bold text-slate-400 border-b border-slate-800">
+                    نسخ مظهر <span className="text-white font-black">{targetPlayer.name}</span> إلى:
+                  </div>
+
+                  {playerConfigs
+                    .filter((p) => p.id !== targetPlayer.id)
+                    .map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => handleCopyGearTo(p.id)}
+                        className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex items-center justify-between cursor-pointer"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
+                          <span>P{p.id}: {p.name}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-500">نسخ إليه</span>
+                      </button>
+                    ))}
+
+                  <div className="pt-1 mt-1 border-t border-slate-800">
+                    <button
+                      onClick={() => handleCopyGearTo('all')}
+                      className="w-full px-2.5 py-1.5 rounded-lg text-xs font-black text-amber-300 hover:bg-amber-950/60 border border-amber-500/30 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      <span>نسخ إلى كافة المقاتلين (الكل)</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {targetPlayer.type === 'cpu' && (
               <button
                 onClick={handleRandomizeBot}

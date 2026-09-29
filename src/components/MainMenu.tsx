@@ -17,6 +17,7 @@ import {
   Gem,
   KeyRound,
   Sparkles,
+  Download,
 } from 'lucide-react';
 import { sounds } from '../audio/soundEngine';
 import { StickmanGamer, StickmanParkour } from './StickmanIcons';
@@ -29,6 +30,7 @@ interface MainMenuProps {
   onOpenControls: () => void;
   onOpenShop: () => void;
   onOpenRedeemCode: () => void;
+  onOpenExport?: () => void;
   coins?: number;
   gems?: number;
   wallet?: PlayerWallet;
@@ -41,6 +43,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onOpenControls,
   onOpenShop,
   onOpenRedeemCode,
+  onOpenExport,
   coins = 0,
   gems = 0,
   wallet,
@@ -181,6 +184,21 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             <span className="hidden sm:inline">{isFullscreen ? 'تصغير' : 'ملء الشاشة'}</span>
           </button>
 
+          {/* Safe Export / Backup Button in Header */}
+          {onOpenExport && (
+            <button
+              onClick={() => {
+                sounds.playButton();
+                onOpenExport();
+              }}
+              title="تصدير اللعبة والنسخ الاحتياطي الآمن"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-sky-500/40 text-sky-300 hover:text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-sky-400" />
+              <span className="hidden sm:inline">تصدير اللعبة</span>
+            </button>
+          )}
+
           {/* Controls Quick Access */}
           <button
             onClick={onOpenControls}
@@ -268,6 +286,20 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               <span className="text-[10px] bg-slate-950 text-amber-300 font-black px-2.5 py-0.5 rounded-full ml-1 shadow-sm">
                 36987 مفعل
               </span>
+            </button>
+          )}
+
+          {/* EXPORT GAME BUTTON (تصدير اللعبة والنسخ الاحتياطي) */}
+          {onOpenExport && (
+            <button
+              onClick={() => {
+                sounds.playButton();
+                onOpenExport();
+              }}
+              className="group relative flex items-center justify-center gap-3 w-full py-3 px-6 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-sky-300 hover:text-white font-bold text-base tracking-wide border border-sky-500/40 hover:border-sky-400 shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
+            >
+              <Download className="w-5 h-5 text-sky-400 transition-transform group-hover:-translate-y-0.5" />
+              <span>تصدير اللعبة والنسخ (EXPORT)</span>
             </button>
           )}
 
